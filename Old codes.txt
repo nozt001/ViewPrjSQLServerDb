@@ -1,0 +1,57 @@
+<!--Save CSV -->
+<!-- -------------------------------------------------------------------- -->
+            /* -- previous code from Sam
+            exportResultsToCsvFile('niyazi.csv');
+
+            //Get table
+            var table = $("#resultsTable")[0];
+
+            //Get number of rows/columns
+            var rowLength = table.rows.length;
+            var colLength = table.rows[0].cells.length;
+
+            console.log(rowLength + ' ' + colLength);
+
+            //Declare string to fill with table data
+            var tableString = "";
+
+            //Get column headers
+            for (var i = 0; i < colLength; i++) {
+                tableString += table.rows[0].cells[i].innerHTML.split(",").join("") + ",";
+            }
+
+
+            tableString = tableString.substring(0, tableString.length - 1);
+            tableString += "\r\n";
+
+            //get row data
+            for (var j = 1; j < rowLength; j++) {
+                for (var k = 0; k < colLength; k++) {
+                    tableString += table.rows[j].cells[k].innerHTML.split(",").join("") + ",";
+                }
+                tableString += "\r\n";
+            }
+
+            var extractionName = $("#extractionTitle").val();
+            var extractionDescription = $("#extractionDescription").val();
+
+            console.log(extractionName);
+
+            $.post('@Url.Action("CsvData", "QueryAndExtraction")', { 'csvData': tableString, 'title': extractionName, 'description': extractionDescription }, function (data, status) {
+                if (status == 'success') {
+                    console.log(data);
+                    Download(data);
+
+                    $.get('@Url.Action("Extractions","QueryAndExtraction")', function (data, status) {
+                        if (status == 'success') {
+                            console.log('Coming to extractions')
+                            $("#extractionsList").html(data);
+                            $("#extractionsBadge").html($("#extractionsCount").text());
+                        }
+                    });
+                }
+            });
+
+            */
+
+<!-- ------------------------------------------------------------------------ -->

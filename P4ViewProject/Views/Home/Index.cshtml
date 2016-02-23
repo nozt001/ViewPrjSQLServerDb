@@ -1,0 +1,61 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+@Styles.Render("~/Content/css/")
+@Scripts.Render("~/bundles/jquery")
+
+
+<div class="container" >
+
+    <div class="row" >
+            <div class=" col-md-6" style="padding: 10px">
+                <div class="panel panel-primary" style="padding: 3px; height: 250px; ">
+                    <div class="panel-heading">
+                        <h4>Query and Data Exract</h4>
+                    </div>
+                    <div class="panel-body">
+                        <p>In this section you can create and run a query</p>
+                        <p>You can analyse the query results after the query and </p>
+                        <p>Extract the query result data set as <strong>CSV text files</strong></p>
+
+                        <br/>
+                        <p>
+                            <a class="btn btn-success btn-lg" href="../QueryAndExtraction/Index">Query Builder &raquo;</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+  
+            <div class="col-md-6" style="padding: 10px">
+                <div class="panel panel-primary" style="padding: 3px; height: 250px; ">
+                    <div class="panel-heading">
+                        <h4>Database Update</h4>
+                    </div>
+                    <div class="panel-body">
+                        <p>Admin privileges required.</p>
+                        <p>Database update with <strong>CSV text files</strong>.</p>
+                        <p>To View registered users and approve their request</p>
+
+                        <br />
+                        <p>
+                            <a class="btn btn-success btn-lg" href="../FileUpload/Index">Data Import &raquo;</a>
+
+
+                            @Html.ActionLink( linkText:"View Users",
+                                           actionName: "ViewUsers",
+                                           controllerName: "Account",
+                                           routeValues: null,
+                                           htmlAttributes: new { @class = "btn btn-warning btn-lg" })
+
+                            @**<input type="submit" value="Register" class="btn btn-warning" /> **@
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+

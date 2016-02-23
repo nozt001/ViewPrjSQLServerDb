@@ -1,0 +1,399 @@
+﻿@model P4ViewProject.Models.ViewExtractedDataWrapperModel
+
+@{
+    ViewBag.Title = "Index";
+}
+
+@Styles.Render("~/Content/css/")
+@Scripts.Render("~/bundles/jquery")
+
+<h2>Query and Extraction Tool</h2>
+
+
+<div class="row">
+    <div class="col col-sm-3">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Query Builder</div>
+            <div class="panel-body" id="queryTreePanel">
+                <div style="left: 4px; position: relative"><img src="../Content/Jstree/database.png" height="15" width="15">@ViewBag.DatabaseName</div>
+                <div id="jstree_demo_div">
+                    <ul>
+                        <!-- in this example the tree is populated from inline HTML -->
+                        @foreach (KeyValuePair<string, List<string>> entry in ViewBag.tableDict)
+                        {
+                            <li data-jstree='{"icon": "../Content/Jstree/dbglyph.PNG"}'>
+                                @entry.Key
+
+                                @if (entry.Value.Count != 0)
+                                {
+                                    <ul>
+                                        @foreach (string value in entry.Value)
+                                        {
+                                            if (!value.ToLower().Contains("transaction_date_start") && !value.ToLower().Contains("transaction_date_end"))
+                                            {
+                                                <li data-jstree='{"icon": "../Content/Jstree/clglyph.PNG"}'>@value</li>
+                                            }
+                                        }
+                                    </ul>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="panel panel-primary">
+            <div class="panel-heading">Previous Extractions <span id="extractionsBadge" class="badge" style="color: #428BCA; background-color:#FFFFFF">0</span></div>
+            <div id="extractionsList" class="panel-body" style="height: 300px; overflow: auto; padding: 0px">
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-9 col-xs-12">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Query Database</div>
+            <div id="queryDatabasePanel" class="panel-body container" style="position: relative">
+                <form id="myForm">
+                    <div class="form-group" style="width: 80%; float: left">
+                        Select <textarea id="selectBox" class="form-control" rows="2" spellcheck="false" placeholder="Select or type fields" name="selectText"></textarea>
+                    </div>
+                    <div class="form-group" style="width: 80%; float: left">
+                        from <textarea id="fromBox" class="form-control" rows="2" spellcheck="false" placeholder="Select or type table names" name="fromText"></textarea>
+                    </div>
+                    <div class="form-group" style="width: 80%; float: left">
+                        where <textarea id="whereBox" class="form-control" rows="4" spellcheck="false" placeholder="Enter conditions" name="whereText"></textarea>
+                    </div>
+                    <div class="form-group" style="width: 80%; float: left">
+                        other clauses <textarea id="otherClauseBox" class="form-control" rows="4" spellcheck="false" placeholder="Enter other clauses" name="otherClauseText"></textarea>
+                    </div>
+                    <!--<button id="runQueryBtn" class="btn btn-primary" type="submit">Run Query</button> -->
+                    <div id="timedCheckBox" class="checkbox">
+                        <label style="font-family: cursive">
+                            <input id="timeCheckBox" type="checkbox"> Do a timed query
+                        </label>
+                    </div>
+                    <div id="myDatePicker" class="hero-unit">
+                        <input type="text" placeholder="Select a date" id="startDatePicker" name="startDate">
+                    </div>
+                    <input id="runQueryBtn" type="button" class="btn btn-primary" value="Run Query" />
+                </form>
+            </div>
+        </div>
+        <div class="panel panel-primary">
+            <div class="panel-heading">Results  <span id="resultsBadge" class="badge" style="color: #428BCA; background-color:#FFFFFF">0</span></div>
+            <div class="panel-body" style="height:300px; position:relative">
+                <section id="partial">
+                    <span style="font-family: cursive; font-size: large">No Results!</span>
+                </section>
+
+                <input id="extractToCsvBtn" type="button" class="btn btn-success" data-toggle="modal" data-target="#myModal" value="Extract to CSV" />
+                <input id="analyseResultsBtn" type="button" onclick="window.location.href = '@Url.Action("AnalyseResults", "QueryAndExtraction")';" class="btn btn-success" value="Analyse Results" />
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="container">
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog" id="extractModalDialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Save Extraction</h4>
+                </div>
+                <div class="modal-body" style="height: 130px">
+                    <form id="myForm">
+                        <div class="form-group" style="width: 80%; float: left">
+                            Extraction Name: <br />
+                            <input id="extractionTitle" class="form-control" spellcheck="false" placeholder="Enter an identifying name for extraction" /> <br />
+                            Extraction Description: <br />
+                            <textarea id="extractionDescription" rows="2" style="resize: none" class="form-control" spellcheck="false" placeholder="Enter a short extraction description." name="description"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="saveExtractionBtn" class="btn btn-default btn-primary" data-dismiss="modal">Save</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+
+<iframe id="my_iframe" style="display:none;"></iframe>
+
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        var lastFocus = undefined;
+        var queryDatabasePanelHeight = $("#queryDatabasePanel").height();
+
+        // if there is some data in the results then the button is visible 
+
+
+        // Reloads the results tables if exists
+        $.get('@Url.Action("getResultsTable", "QueryAndExtraction")', function (data, status) {
+            if (status == 'success') {
+                if (data != '') {
+                    $("#partial").html(data);
+
+                    $.get('@Url.Action("getRows", "QueryAndExtraction")', function (data, status) {
+                        if (status == 'success') {
+                            $("#resultsBadge").html(data);
+                        }
+
+                        // if the table has results then add the csv download button
+                        // code here 
+                    });
+                }
+            }
+
+        });
+
+        //Fills the extraction panel with extractions
+        $.get('@Url.Action("Extractions","QueryAndExtraction")', function (data, status) {
+            if (status == 'success') {
+                $("#extractionsList").html(data);
+                $("#extractionsBadge").html($("#extractionsCount").text());
+            }
+        });
+
+        // Makes sure that the height of tree panel is equal to the query panel
+        $("#queryDatabasePanel").resize(function () {
+            $("#queryTreePanel").height($("#queryTreePanel").height() + ($("#queryDatabasePanel").height() - queryDatabasePanelHeight));
+            queryDatabasePanelHeight = $("#queryDatabasePanel").height();
+        });
+
+        // Sends the query information to controller, retrieves and displays results
+        $("#runQueryBtn").click(function () {
+            $.post('@Url.Action("ViewData", "QueryAndExtraction")', $("#myForm").serialize(), function (data, status) {
+                if (status == 'success') {
+
+                    $("#partial").html(data);
+
+                    $.get('@Url.Action("getRows", "QueryAndExtraction")', function (data, status) {
+                        if (status == 'success') {
+                            $("#resultsBadge").html(data);
+                        }
+                    });
+                }
+
+            });
+        });
+
+        // Date check box
+        $("#timeCheckBox").click(function () {
+            $("#startDatePicker").toggle();
+            $("#startDatePicker").val('');
+        });
+
+        $("#startDatePicker").hide();
+
+        $('#startDatePicker').datepicker({
+            format: "mm/dd/yyyy"
+        });
+
+        // Create Tree
+        $('#jstree_demo_div').jstree();
+        $('#jstree_demo_div').on("changed.jstree", function (e, data) {
+            console.log(data.selected);
+        });
+
+
+        //Creates a csv string and sends to controller to be written to a file
+        $("#saveExtractionBtn").on('click', function (event) {
+
+            var data = [];
+            var seperator = ",";
+
+            // add Column Names from resultsTable table to data[] Array
+            data.push(
+                $("#resultsTable th").map(function () {
+                    return $(this).text();
+                }).toArray()
+            );
+
+            // add data rows from resultsTable to data[] Array
+            $("#resultsTable tbody tr").each(function () {
+                data.push($(this).find("td").map(function () {
+                    return $(this).text();
+                }).toArray());
+            });
+
+            alert('#saveExtractionBtn');
+            csvGenerator = new CsvGenerator(data, 'my_table.csv');
+            csvGenerator.download(true);
+
+        });
+
+        function CsvGenerator(dataArray, fileName, separator, addQuotes) {
+            this.dataArray = dataArray;
+            this.fileName = fileName;
+            this.separator = separator;
+            this.addQuotes = !!addQuotes;
+
+            alert('CsvGenerator');
+            if (this.addQuotes) {
+                this.separator = '"' + this.separator + '"';
+            }
+
+            this.getDownloadLink = function () {
+                var separator = this.separator;
+                var addQuotes = this.addQuotes;
+
+                var rows = this.dataArray.map(function (row) {
+                    var rowData = row.join(separator);
+
+                    if (rowData.length && addQuotes) {
+                        return '"' + rowData + '"';
+                    };
+
+                    return rowData;
+                });
+
+                var type = "data:text/csv;charset=utf-8";
+                var data = rows.join('\n');
+
+                if (typeof btoa === 'function') {
+                    type += ";base64";
+                    data = btoa(data);
+                } else {
+                    data = encodeURIComponent(data);
+                }
+
+                return this.downloadLink = this.downloadLink || type + ',' + data;
+            };
+
+            this.getLinkElement = function (linkText) {
+                var downloadLink = this.getDownloadLink();
+
+                return this.linkElement = this.linkElement || $('<a>' + (linkText || '') + '</a>', {
+                    href: downloadLink,
+                    download: this.fileName
+                });
+
+            };
+
+            // call with removeAfterDownload = true if the link to be removed after the call
+            this.download = function (removeAfterDownload) {
+                this.getLinkElement().css('display', 'none').appendTo('body');
+                this.getLinkElement()[0].click();
+                if (removeAfterDownload) {
+                    this.getLinkElement().remove();
+                }
+            };
+
+        } // function export results 
+
+        $('#jstree_demo_div').on('select_node.jstree', function (e, data) {
+            var selectedNode = data;
+            getNodeAndUpdateTextBox(selectedNode);
+        });
+
+        // Retrieves query information of the clicked element on extractions list and fills the query information
+        $(document).on('click', '.list-group .list-group-item', function (e) {
+            //alert($(this).find('h4').text())
+
+            $.post('@Url.Action("GetExtractionInfo","QueryAndExtraction")', { extractionName: $(this).find('h4').text() }, function (data, status) {
+                if (status == 'success') {
+                    var extractionObj = JSON.parse(data);
+                    console.log(extractionObj);
+                    $('#selectBox').val(extractionObj.SelectBox);
+                    $('#fromBox').val(extractionObj.FromBox);
+                    $('#whereBox').val(extractionObj.WhereBox);
+                    $('#otherClauseBox').val(extractionObj.OtherClausesBox);
+                    $('#timeCheckBox').click();
+                    $('#startDatePicker').val(extractionObj.QueryDate);
+                }
+            });
+
+        });
+
+        function getNodeAndUpdateTextBox(selectedNode) {
+            try {
+                var lnLevel = selectedNode.node.parents.length;
+                var lsSelectedID = selectedNode.node.id;
+                var loParent = $("#" + lsSelectedID);
+                var lsParents = '';
+                for (var ln = 0; ln <= lnLevel - 1 ; ln++) {
+                    var loParent = loParent.parent().parent();
+                    if (loParent.children()[1] != undefined) {
+                        lsParents += loParent.children()[1].text;
+                    }
+                }
+                lsParents += selectedNode.node.text;
+
+                lsParents = lsParents.trim();
+                if (lsParents.indexOf(" ") != -1) {
+                    lsParents = lsParents.replace(" ", ".");
+                }
+                lsParents = lsParents.replace(/[ /\n]+/g, '');
+                console.log("\"" + lsParents + "\"");
+
+                if (typeof lastFocus !== typeof undefined) {
+
+                    var textAreaId = lastFocus.attr("id");
+
+                    if (textAreaId == "selectBox" || textAreaId == "fromBox" || textAreaId == "whereBox" || textAreaId == "otherClauseBox") {
+                        lastFocus.focus();
+                        console.log(lastFocus.attr("id"));
+
+                        console.log('Working till her');
+
+
+                        // Fields Validation
+                        if (lastFocus.val() != "" && (textAreaId == "selectBox" || textAreaId == "fromBox")) {
+                            if (textAreaId == "fromBox" && $("#fromBox").val().indexOf(lsParents) == -1 && lsParents.indexOf(".") == -1) {
+                                lastFocus.val(lastFocus.val() + ', ' + lsParents);
+                            } else if (textAreaId == "selectBox" && lsParents.indexOf(".") != -1) {
+                                lastFocus.val(lastFocus.val() + ', ' + lsParents);
+                            }
+                            if (textAreaId == "selectBox" && $("#fromBox").val().indexOf(lsParents.substring(0, lsParents.indexOf('.'))) == -1) {
+                                $("#fromBox").val($("#fromBox").val() + ', ' + lsParents.substring(0, lsParents.indexOf('.')));
+                            }
+                        } else if ((textAreaId == "whereBox" || textAreaId == "otherClauseBox") && lsParents.indexOf('.') != -1) {
+                            lastFocus.val(lastFocus.val() + lsParents + ' ');
+                        } else {
+                            if (textAreaId == "selectBox" && lsParents.indexOf(".") != -1) {
+                                lastFocus.val(lastFocus.val() + lsParents);
+
+                                if (textAreaId == "selectBox" && $("#fromBox").val().indexOf(lsParents.substring(0, lsParents.indexOf('.'))) == -1) {
+                                    $("#fromBox").val($("#fromBox").val() + lsParents.substring(0, lsParents.indexOf('.')));
+                                }
+                            }
+                            if (textAreaId == "fromBox" && lsParents.indexOf(".") == -1) {
+                                lastFocus.val(lastFocus.val() + lsParents);
+                            }
+
+
+                        }
+                    }
+                }
+            }
+            catch (err) {
+                alert('Error in getNodeAndUpdateTextBox');
+            }
+        }
+
+        // Tracks last selected textarea
+        $("textarea").focusout(function () {
+            console.log($(this).val());
+            lastFocus = $(this);
+        });
+
+        // data-jstree='{"icon":"./images/tree.png"}'
+    });
+
+    //Downloads the file
+    function Download(url) {
+        document.getElementById('my_iframe').src = url;
+    };
+
+</script>

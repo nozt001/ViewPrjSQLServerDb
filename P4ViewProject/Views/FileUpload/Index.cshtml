@@ -1,0 +1,110 @@
+﻿@using System.Web.Hosting
+@using Microsoft.AspNet.Identity
+@using P4ViewProject.Models;
+
+@model IEnumerable<string>
+
+@{
+    ViewBag.Title = "Index";
+}
+<br>
+
+<div class="container">
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+            <h3>Upload CSV Files</h3>
+        </div>
+        <div class="panel-body well">
+            @using (Html.BeginForm("Index", "FileUpload", FormMethod.Post, new {enctype = "multipart/form-data"}))
+            {
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="File" name="file" id="file" value="Choose File" class="btn btn-primary btn-lg" 
+                               accept="text/csv"
+                               />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" id="upload" class="btn btn-success btn-lg">
+                            <span class="glyphicon glyphicon-upload"></span> Upload
+                        </button>
+                    </div>
+
+                </div>
+            }
+
+            <hr>
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <th>File Name</th>
+                    <th>Import into Database</th>
+                    <th>File Size</th>
+                    <th>File Date</th>
+                    <th>Operations</th>
+                </tr>
+                </thead>
+                <tbody>
+                @{ var count = 0;}
+                @foreach (var fName in Model)
+                {
+                    count++;
+                    <tr>
+                        @{var name = fName;
+                            var link = @Url.Content(P4ViewProject.Models.Constants.CsvFilesPath) + name.Replace(" ", "%20");
+                            var dataFile = HostingEnvironment.MapPath(P4ViewProject.Models.Constants.CsvFilesPath + name);
+
+                            FileInfo fInfo = new FileInfo(dataFile);
+                            string fileSize = (fInfo.Length).ToString();
+                            string fileDate = (fInfo.CreationTime).ToString();
+
+                            <td><span class="label label-primary">@count</span> 
+                                <span> </span>
+                                @Html.ActionLink(@fName, "ViewCsvData", new {filename = @fName})
+                            </td>
+                            <td>
+                                @Html.ActionLink("Import to DB", "ImportCsvToDb", new {filename = @fName})
+                            </td>
+
+                            <td>
+                                @fileSize bytes
+                            </td>
+                            <td>
+                                @fileDate
+                            </td>
+                            <td id="deleteLink"> @Html.ActionLink("Delete", "Delete", new {filename = @fName})
+                            </td>
+
+                        }
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+
+    var fileName = $("#file").text();
+
+    fileName.onchange = function () {
+        alert(fileName);
+        var ext = this.value.match('/\.(.+)$')[1];
+        switch (ext) {
+            case 'csv':
+                break;
+            default:
+                alert('Only CSV  type files are allowed.');
+                this.value = '';
+        }
+    };
+
+    $(document).ready(function () {
+
+
+        $('#upload').click(function() {
+            var fname = $("#file").value();
+            alert(fname);
+        });
+    });
+
+</script>
